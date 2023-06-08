@@ -40,7 +40,7 @@ def param_parser():
     parser.add_argument(
         "--epoch_num",
         type=int,
-        default=100,
+        default=10,
         help="Number of training epochs. Default is 100."
     )
 

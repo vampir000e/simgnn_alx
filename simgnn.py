@@ -16,7 +16,7 @@ from extra import feedback_Att, Dense_GCN, Conv_module
 
 
 """SimGNN_alx: A neural network approach to fast graph similarity computation"""
-class SimGNN(nn.Moudule):
+class SimGNN(nn.Module):
 
     def __init__(self, args, number_of_labels, device):
         super(SimGNN, self).__init__()

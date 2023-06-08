@@ -9,6 +9,7 @@
 import torch
 import torch.nn as nn
 from torch_geometric.nn import GCNConv
+from texttable import Texttable
 
 
 """带有err_feedback机制的Att"""
@@ -156,3 +157,18 @@ class Conv(nn.Module):
 
     def forward(self, x):
         return self.act(self.conv(x))
+
+
+def tab_printer(args):
+    """
+    参数设置打印
+    :param args:
+    :return:
+    """
+    args = vars(args)
+    keys = sorted(args.keys())
+    t = Texttable()
+    t.add_rows(
+        [["Parameter", "Value"]] + [[k.replace("_", " ").capitalize(), args[k]] for k in keys]
+    )
+    print(t.draw())
