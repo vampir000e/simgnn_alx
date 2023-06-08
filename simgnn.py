@@ -9,6 +9,10 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as functional
+from torch_geometric.nn import GCNConv
+from torch_geometric.utils import to_dense_adj, to_dense_batch
+
 
 
 """SimGNN_alx: A neural network approach to fast graph similarity computation"""
@@ -65,6 +69,109 @@ class SimGNN(nn.Moudule):
             s = torch.mm(embedding_1, embedding_2).detach() #使用detach截断反向传播的梯度流  torch.mm矩阵相乘
             s = s.view(-1, 1)
             hist = torch.histc(s, bins=16) #计算直方图向量，元素被分类到min-max之间等宽的bin中，默认使用数据的最小值和最大值
+
+            return hist
+
+        s = torch.mm(embedding_1, embedding_2)
+        ret = self.C(s)
+        return ret
+
+    def forward(self, data):
+        edge_1 = data["edge_index_1"]
+        edge_2 = data["edge_index_2"]
+        features_1 = data["features"]
+        features_2 = data["features_2"]
+
+        """通过图卷积网络得到每个节点的特征向量"""
+        if self.ifDense_GCN is True:
+            embedding_1 = self.D_G(edge_1, features_1)
+            embedding_2 = self.D_G(edge_2, features_2)
+
+        """节点嵌入生成图嵌入"""
+        graph_embedding_1 = self.Att(embedding_1)
+        graph_embedding_2 = self.Att(embedding_2)
+
+        """NTN"""
+        scores = torch.t(self.NTN(graph_embedding_1, graph_embedding_2)) #图嵌入交互分数
+
+        """Histogram"""
+        if (self.hist != "node"):
+            h = self.calculate_hist(embedding_1, torch.t(embedding_2))
+            scores = torch.cat((scores, h), dim=1).view(1, -1) #score拼接上hist相似向量
+
+        """计算最终的相似分数"""
+        ret = self.fc(scores)
+        return ret
+
+    def diff(self, abstract_features, edge_index, batch):
+        """
+        差分池化
+        :param abstract_features: 节点特征矩阵
+        :param edge_index: 边索引
+        :param batch: Batch vector, which assigns each node to a specific example
+        :return: pooled_features: Graph feature matrix
+        """
+        x, mask = to_dense_batch(abstract_features, batch)
+        adj = to_dense_adj(edge_index, batch)
+        return self.attention(x, adj, mask)
+
+    def consine_attention(self, v1, v2):
+        """
+        :param v1: (batch, len1, dim)
+        :param v2: (batch, len2, dim)
+        :return: (batch, len1, len2)
+        """
+        # (batch, len1, len2)
+        a = torch.bmm(v1, v2.permute(0, 2, 1))
+
+        v1_norm = v1.norm(p=2, dim=2, keepdim=True)  #(batch, len1, 1)
+        v2_norm = v2.norm(p=2, dim=2, keepdim=True).permute(0, 2, 1) #(batch, len2, 1)
+        d = v1_norm * v2_norm
+        return self.div_with_small_value(a, d)
+
+    def global_aggregation_info(self, v, agg_func_name):
+        """
+        :param v: (batch, len, dim)
+        :param agg_func_name:
+        :return: (batch, len)
+        """
+        if agg_func_name.lower() == 'max_pool':
+            agg_v = torch.max(v, 1)[0]
+        elif agg_func_name.lower() == 'fc_max_pool':
+            agg_v = self.global_fc_agg(v)
+            agg_v = torch.max(agg_v, 1)[0]
+        elif agg_func_name.lower() == 'mean_pool':
+            agg_v = torch.mean(v, dim=1)
+        elif agg_func_name.lower() == 'fc_mean_pool':
+            agg_v = self.global_fc_agg(v)
+            agg_v = torch.mean(agg_v, dim=1)
+        elif agg_func_name.lower() == 'lstm':
+            _, (agg_v_last, _) = self.global_lstm_agg(v)
+            agg_v = agg_v_last.permute(1, 0, 2).contiguous().view(-1, self.gcn_last_filter * 2)
+        else:
+            raise NotImplementedError
+        return agg_v
+
+    def multi_perspective_match_func(self, v1, v2, w):
+        """
+        :param v1: (batch, len, dim)
+        :param v2: (batch, len, dim)
+        :param w: (perspectives, dim)
+        :return: (batch, len, perspectives)
+        """
+        w = w.transpose(1, 0).unsqueeze(0).unsqueeze(0)        # (1, 1, dim, perspectives)
+        v1 = w * torch.stack([v1] * self.perspectives, dim=3)  # (batch, len, dim, perspectives)
+        v2 = w * torch.stack([v2] * self.perspectives, dim=3)  # (batch, len, dim, perspectives)
+        return functional.consine_simlarity(v1, v2, dim=2)     # (batch, len, perspectives)
+
+    def forward_dense_gcn_layer(self, feat, adj):
+
+        feat_in = feat
+        for i in range(1, self.gcn_numbers + 1):
+            feat_out = functional.relu(getattr(self, 'gc{}'.format(i))(x=feat_in, adj=adj, mask=None, add_loop=False), inplace=True)
+            feat_out = functional.dropout(feat_out, p=self.dropout, training=self.training)
+            feat_in = feat_out
+        return feat_out
 
 
 """可学习的注意模块"""
