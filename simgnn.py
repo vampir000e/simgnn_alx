@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as functional
 from torch_geometric.nn import GCNConv
 from torch_geometric.utils import to_dense_adj, to_dense_batch
-
+from extra import feedback_Att, Dense_GCN, Conv_module
 
 
 """SimGNN_alx: A neural network approach to fast graph similarity computation"""
