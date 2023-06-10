@@ -8,6 +8,7 @@
 
 import torch
 import torch.nn as nn
+import numpy as np
 from torch_geometric.nn import GCNConv
 from texttable import Texttable
 
@@ -47,17 +48,17 @@ class Dense_GCN(nn.Module):
         self.fc = Dense(64+32+16, 16, act="relu")
         self.device = device
 
-    def foward(self, edges, features):
+    def forward(self, edges, features):
         edges = edges.to(self.device)
         features = features.to(self.device)
 
         features = self.conv_1(features, edges)
-        features = nn.funtional.relu(features)
-        features1 = nn.funtional.dropout(features, p=0.3, training=self.training)
+        features = nn.functional.relu(features)
+        features1 = nn.functional.dropout(features, p=0.3, training=self.training)
 
         features2 = self.conv_2(features1, edges)
         features2 = nn.functional.relu(features2)
-        features2 = nn.funtional.dropout(features2, p=0.4, training=self.training) # p丢弃率
+        features2 = nn.functional.dropout(features2, p=0.4, training=self.training) # p丢弃率
 
         features3 = self.conv_3(features2, edges)
         features3 = nn.functional.relu(features3)
@@ -126,7 +127,7 @@ class Conv1d(nn.Module):
         return self.act(self.conv(x))
 
 
-
+"""封装， 预设权重和激活函数的Linear"""
 class Dense(nn.Module):
 
     def __init__(self, in_size, out_size, bias=True, act="relu"):
@@ -134,18 +135,21 @@ class Dense(nn.Module):
         self.conv = nn.Linear(in_size, out_size, bias)
         self.act = nn.ReLU()
         if (act == "sigmoid"):
-            self.act = nn.sigmoid()
+            self.act = nn.Sigmoid()
 
         """预设权重"""
         nn.init.kaiming_normal_(self.conv.weight)
         if bias is True:
             self.conv.bias.data.zero_()
 
+    def forward(self, x):
+        return self.act(self.conv(x))
+
 
 """封装 预设权重和激活函数的nn.Conv1d"""
 class Conv(nn.Module):
 
-    def __init__(self, in_channel, out_channel, kernel_size=3, stride=1, padding=1, bioas=True, act="relu"):
+    def __init__(self, in_channel, out_channel, kernel_size=3, stride=1, padding=1, bias=True, act="relu"):
         super(Conv, self).__init__()
         self.conv = nn.Conv2d(in_channel, out_channel, kernel_size, stride, padding, bias=bias)
         self.act = nn.ReLU()
@@ -172,3 +176,22 @@ def tab_printer(args):
         [["Parameter", "Value"]] + [[k.replace("_", " ").capitalize(), args[k]] for k in keys]
     )
     print(t.draw())
+
+
+def random_id(graph, label):
+    tmp_graph = []
+    for edge in graph:
+        tmp_graph.append(edge.copy())
+
+    n = np.shape(label)[0]
+    iid = [i for i in range(n)]
+    tmp_label = [0 for i in range(n)]
+
+    np.random.shuffle(iid)  #换称号,i的称号换成iid[i]
+
+    for edge in tmp_graph:
+        edge[0], edge[1] = iid[edge[0]], iid[edge[1]]
+    for i in range(n):
+        tmp_label[iid[i]] = label[i]
+
+    return tmp_graph, tmp_label

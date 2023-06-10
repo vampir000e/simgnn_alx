@@ -8,10 +8,11 @@
 
 import pickle
 import random
-
+import time
 import numpy as np
 import torch.optim
 from tqdm import tqdm, trange
+
 from simgnn import SimGNN
 from parameter_config import param_parser
 from extra import tab_printer, random_id
@@ -28,7 +29,7 @@ class Trainer(object):
     def prepare_for_train(self):
         self.batch_size = self.args.batch_size
         self.epoch_num = self.args.epoch_num
-        self.record = [] # 用来记录(train_loss, val_loss)
+        self.record = []  # 用来记录(train_loss, val_loss)
         self.random_id = self.args.random_id
         self.hist = self.args.hist
         self.ifDense_GCN = self.args.ifDense_GCN
@@ -37,18 +38,20 @@ class Trainer(object):
         self.type = self.args.type
         self.val = self.args.val
 
-        """载入数据并划分出验证集"""
+        """载入数据并划分出 验证集"""
         print("\nEnumerating unique labels.\n")
 
-        path = "../datasets/" + self.dataset + "/" + self.type
-        self.training_graphs = pickle.load(open(path + "/train_data.pickle", 'rb'))
+        path = "../" + "datasets/" + self.dataset + "/" + self.type
+        self.training_graphs = pickle.load(open(path + "/train_data.pickle", 'rb'))  #
         self.testing_graphs = pickle.load(open(path + "/test_data.pickle", 'rb'))
 
-        random.shuffle(self.training_graphs) #训练集随机排序，然后随机划分
+        # print(len(self.training_graphs)) # 37950
+
+        random.shuffle(self.training_graphs)  # 训练集随机排序,然后随机划分
         L = len(self.training_graphs)
         # print(L)    # 37950    30360+7590 训练集 + 验证集
         div = int((1 - self.val) * L)
-        self.val_graphs = self.training_graphs[div:L] #后20%验证集
+        self.val_graphs = self.training_graphs[div:L]  # 后20%验证集
         self.training_graphs = self.training_graphs[0:div]
 
         graph_pairs = self.training_graphs + self.testing_graphs  # 30360 + 18975 = 49335
@@ -64,13 +67,16 @@ class Trainer(object):
             self.global_labels = self.global_labels.union(set(data["labels_1"]))
             self.global_labels = self.global_labels.union(set(data["labels_2"]))
         self.global_labels = list(self.global_labels)
-        self.global_labels = {val:index for index, val in enumerate(self.global_labels)}
-        self.labels = len(self.global_labels) #标签总数
+        self.global_labels = {val: index for index, val in enumerate(self.global_labels)}
+        self.labels = len(self.global_labels)  # 标签总数
 
-        """interface"""
+        #######################################interface#####################################
         self.model = SimGNN(self.args, self.labels, self.device).to(self.device)
+
         # self.model = SimGNN_graphsim(self.labels, self.hist, self.ifDense_GCN, self.feedback)
+
         self.optimizer = torch.optim.Adam(self.model.parameters())
+
 
     def fit(self):
         """
@@ -96,17 +102,124 @@ class Trainer(object):
                 epochs.set_description("Epoch (Loss=%g)" % round(loss, 6))
 
             val_loss = self.validate()
-            self.record.append((loss, val_loss)) #记录(train_loss, validate_loss)
+            self.record.append((loss, val_loss))  # 记录(train_loss, val_loss)
             epochs.set_description("Epoch train_loss:[%g] val_loss:[%g]" % (round(loss, 5), round(val_loss, 5)))
 
-            path = "../datasets/" + self.dataset + "/" + self.type
-            with open(path + 'train_error_graph.txt', 'a') as train_error_writer:
+            path = "../../datasets/" + self.dataset + "/" + self.type  # ged
+            with open(path + '/train_error_graph.txt', "a") as train_error_writer:
                 train_error_writer.write(str(epoch_counter) + ',' + str(round(loss, 6)) + '\n')
             train_error_writer.close()
 
             torch.save(self.model.state_dict(), path + '/model_state.pth')
             epoch_counter += 1
             self.score(epoch_counter)
+
+            # self.train(epochs)
+
+            # if (epoch+1) % 5 == 0:
+            #     self.save_model("model"+str((epoch+1)/5)+".pkl")
+            #     self.save_record("recordfile"+str((epoch+1)/5))
+
+            # save_path = os.path.abspath(os.path.join(os.path.dirname("__file__"), os.path.pardir))  # /src
+            # save_path = save_path + "\\datasets\\" + self.datasets + "\\" + self.type
+            # self.save_model(save_path + "\\model.pkl")
+            # self.save_record(save_path + "\\recordfile")
+
+    """每个epoch验证一次"""
+    def validate(self):
+
+        self.model.eval()
+        losses = 0
+        for data in self.val_graphs:
+            data = self.transfer_to_torch(data)
+            prediction = self.model(data)
+            losses = losses + torch.nn.functional.mse_loss(data["target"], prediction[0])
+        return losses.item()
+
+    def score(self, epoch_counter):
+        """
+        Scoring on the test set.
+        """
+        print("\n\nModel evaluation.\n")
+        start_time = time.time()
+        self.model.eval()
+
+        scores = []
+        losses = 0
+        mae = 0
+        rho = 0
+        tau = 0
+        pat10 = 0
+        pat20 = 0
+        # ground_truth = np.zeros((len(self.testing_graphs), len(self.training_graphs)))
+        # prediction_mat = np.zeros((len(self.testing_graphs), len(self.training_graphs)))
+        test_mse = 0
+        test_rho = 0
+        test_tau = 0
+        # rho_list = []
+
+        i = 0
+        for data in tqdm(self.testing_graphs):  # data: test_graph
+            data = self.transfer_to_torch(data)
+            target = data["target"]
+            prediction = self.model(data)
+            # prediction_mat[i] = prediction.detach().cpu().numpy()
+            # ground_truth[i] = target.cpu().numpy()
+
+            losses += torch.nn.functional.mse_loss(prediction[0], data["target"])
+            scores.append(F.mse_loss(prediction, target, reduction="none"))
+            mae = mae + torch.nn.functional.l1_loss(prediction[0], data["target"])
+            # rho += calculate_ranking_correlation(spearmanr, prediction_mat[i], ground_truth[i])
+            # rho_list.append(
+            #     calculate_ranking_correlation(
+            #         spearmanr, prediction_mat[i], ground_truth[i]
+            #     )
+            # )
+            # tau += calculate_ranking_correlation(kendalltau, prediction_mat[i], ground_truth[i])
+            # rho += metrics_spearmanr_rho(ground_truth[i], prediction_mat[i])
+            # tau += metrics_kendall_tau(ground_truth[i], prediction_mat[i])
+            # pat10 += calculate_prec_at_k(10, prediction_mat[i], ground_truth[i])
+            # pat20 += calculate_prec_at_k(20, prediction_mat[i], ground_truth[i])
+            i += 1
+
+        # model_error = np.mean(scores).item()
+        losses = losses / len(self.testing_graphs)
+        mae = mae / len(self.testing_graphs)
+        rho = rho / len(self.testing_graphs)
+        # test_rho = np.mean(rho_list).item()
+        tau = tau / len(self.testing_graphs)
+        pat10 = pat10 / len(self.testing_graphs)
+        pat20 = pat20 / len(self.testing_graphs)
+
+        # res_path = os.path.abspath(os.path.join(os.path.dirname("__file__"), os.path.pardir))  # /src
+        # res_path = res_path + "\\datasets\\" + self.datasets + "\\" + self.type
+        # with open(res_path + '/figures.txt', 'a') as f:
+        #     print("\n--- %s seconds ---" % (time.time()), file=f)
+        #     print("\nMSE: " + str(round(model_error, 5)) + ".", file=f)
+        #     # print("\nModel test error: " + str(round(losses.item(), 5)) + ".", file=f)
+        #     print("\nMAE: " + str(round(mae.item(), 5)) + ".", file=f)
+        #     print("\nSpearman's rho: " + str(round(rho, 5)) + ".", file=f)
+        #     print("\nKendall's tau: " + str(round(tau, 5)) + ".", file=f)
+        #     print("p@10: " + str(round(pat10, 5)) + ".", file=f)
+        #     print("p@20: " + str(round(pat20, 5)) + ".", file=f)
+        #     print("\n")
+
+        save_path = "../../datasets/" + self.dataset + "/" + self.type
+        # print('\n\n >>>>>>>>>>>>>>>>>>\t' + str(model_error) + '\n')
+        with open(save_path + "/test_error_graph.txt", "a") as test_error_writer:
+            test_error_writer.write(str(epoch_counter) + ',' + str(losses) + '\n')
+        test_error_writer.close()
+
+
+        print("--- %s seconds ---" % (time.time() - start_time))
+        # print("\nMSE: " + str(round(model_error, 5)) + ".")
+        print("\nMSE: " + str(round(losses.item(), 5)) + ".")
+        print("MAE: " + str(round(mae.item(), 5)) + ".")
+        print("Spearman's rho: " + str(round(rho, 5)) + ".")
+        # print("test_rho: " + str(round(test_rho, 5)) + ".")
+        print("Kendall's tau: " + str(round(tau, 5)) + ".")
+        print("p@10: " + str(round(pat10, 5)) + ".")
+        print("p@20: " + str(round(pat20, 5)) + ".")
 
     def create_batches(self):
         """
@@ -133,16 +246,17 @@ class Trainer(object):
         loss = losses.item()
         return loss
 
+    """将读入的文件转化成网络能接受的形式"""
     def transfer_to_torch(self, data):
         new_data = dict()
         tmp_edges_1 = data["graph_1"]
-        tmp_edged_2 = data["graph_2"]
+        tmp_edges_2 = data["graph_2"]
         tmp_labels_1 = data["labels_1"]
         tmp_labels_2 = data["labels_2"]
 
         if self.random_id is True:
             tmp_edges_1, tmp_labels_1 = random_id(tmp_edges_1, tmp_labels_1)
-            tmp_edges_2, tmp_labels_2 = random_id(tmp_edged_2, tmp_labels_2)
+            tmp_edges_2, tmp_labels_2 = random_id(tmp_edges_2, tmp_labels_2)
 
         edges_1 = tmp_edges_1 + [[y, x] for x, y in tmp_edges_1]
         edges_2 = tmp_edges_2 + [[y, x] for x, y in tmp_edges_2]
@@ -164,7 +278,7 @@ class Trainer(object):
         new_data["edge_index_2"] = edges_2
         new_data["features_1"] = features_1
         new_data["features_2"] = features_2
-        norm_ged = data["ged"] / (0.5 * (len(data["labels_1"]) + len(data["labels_2"])))
+        norm_ged = data["ged"]/(0.5*(len(data["labels_1"])+len(data["labels_2"])))
         new_data["target"] = torch.from_numpy(np.exp(-norm_ged).reshape(1, 1)).view(-1).float().to(self.device)
 
         return new_data
@@ -188,7 +302,7 @@ if __name__ == '__main__':
         elif sys.platform == "posix":
             os.system(
                 """
-                    osascript -e 'display notification :"SimGNN" with title "Program is finished."'
+                   osascript -e 'display notification "SimGNN" with title "Program is finished."'
                 """
             )
         else:
