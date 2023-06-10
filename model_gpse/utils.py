@@ -7,7 +7,24 @@
 # @Email   : 578520080@qq.com
 
 import os
+import numpy as np
 from scipy import stats
+from texttable import Texttable
+
+
+def tab_printer(args):
+    """
+    参数设置打印
+    :param args:
+    :return:
+    """
+    args = vars(args)
+    keys = sorted(args.keys())
+    t = Texttable()
+    t.add_rows(
+        [["Parameter", "Value"]] + [[k.replace("_", " ").capitalize(), args[k]] for k in keys]
+    )
+    print(t.draw())
 
 def create_dir_if_not_exists(directory):
     if not os.path.exists(directory):

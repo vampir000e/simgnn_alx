@@ -329,7 +329,6 @@ def computing_precision_ks(trues, predictions, ks, inclusive=True, rm=0):
     inclusive_final_pred_ks = np.zeros((m, len(ks)))
 
     for i in range(m):
-
         for k_idx, k in enumerate(ks):
             assert (type(k) is int and 0 < k < n)
             true_ids, true_k = top_k_ids(trues, i, k, inclusive, rm)
@@ -338,6 +337,7 @@ def computing_precision_ks(trues, predictions, ks, inclusive=True, rm=0):
             inclusive_final_true_ks[i][k_idx] = true_k
             inclusive_final_pred_ks[i][k_idx] = pred_k
     return np.mean(precision_ks, axis=0), np.mean(inclusive_final_true_ks, axis=0), np.mean(inclusive_final_pred_ks, axis=0)
+
 
 def sorted_nicely(l):
     def try_int(s):

@@ -15,9 +15,8 @@ from data import GEDDataset
 from parameter_config import ged_args
 from utils import create_dir_if_not_exists, write_log_file
 from gpse import GraphMatchNetwork
-from utils import metrics_kendall_tau, metrics_spearmanr_rho, metrics_mean_square_error
+from utils import metrics_kendall_tau, metrics_spearmanr_rho, metrics_mean_square_error, tab_printer
 from model_utils import computing_precision_ks
-
 
 class Trainer(object):
 
@@ -106,7 +105,7 @@ class Trainer(object):
         val_loss, val_true_pred, time_spent = self.val_batch_predication(val_feature_1, val_adj_1, val_mask_1,
                                                                          val_feature_2, val_adj_2, val_mask_2, val_ged)
         write_log_file(self.log_file,
-                       "\nDouble check validation, loss = {}(e-3) @ {}".format(val_loss * 1000, datetime.now()))
+                       "\nValidation loss = {}(e-3) @ {}".format(val_loss * 1000, datetime.now()))
 
         # testing
         test_predictions = self.testing_prediction()
@@ -114,7 +113,7 @@ class Trainer(object):
         test_rho = metrics_spearmanr_rho(self.dataset.ground_truth.flatten(), test_predictions.flatten())
         test_tau = metrics_kendall_tau(self.dataset.ground_truth.flatten(), test_predictions.flatten())
         ps, inclusive_true_ks, inclusive_pred_ks = computing_precision_ks(trues=self.dataset.ground_truth,
-                                                                          predictions=test_predictions, ks=[10, 20],
+                                                                          predictions=test_predictions, ks=[10, 20],  #ks=[10, 20]
                                                                           inclusive=self.flag_inclusive, rm=0)
         test_results = {
             'mse': test_mse,
@@ -192,7 +191,7 @@ class Trainer(object):
 
     def testing_prediction(self):
         results = np.zeros((len(self.dataset.testing_graphs), len(self.dataset.train_val_graphs)))
-        write_log_file(self.log_file, 'figures shape is {} '.format(results.shape))
+        # write_log_file(self.log_file, 'result.shape is {} '.format(results.shape))
         for row in range(len(self.dataset.testing_graphs)):
             batch_rows_feature, batch_rows_adjacent, batch_rows_mask, batch_cols_feature, batch_cols_adjacent, batch_cols_mask = self.dataset.extract_test_matrices(
                 row)
@@ -227,7 +226,6 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = ged_args.gpu_index
 
     # path = os.path.abspath(os.path.join(os.path.dirname("__file__"), os.path.pardir)) #/src
-
     create_dir_if_not_exists(ged_args.log_path)
     log_root_dir = ged_args.log_path # ./GEDLogs/
     signature = ged_args.dataset + '@' + datetime.now().strftime("%Y-%m-%d@%H-%M-%S")
@@ -237,6 +235,15 @@ if __name__ == '__main__':
     log_file_path = os.path.join(current_run_dir, 'log.txt')    #./GEDLogs/log.txt
     ged_main_dir = ged_args.data_dir
 
+    tab_printer(ged_args)
     trainer = Trainer(data_dir=ged_main_dir, device=d, best_model_path=model_save_path, args=ged_args, log_path=log_file_path)
     trainer.fit()
     trainer.test()
+
+    # ged_main_dir = "../datasets/"
+    # model_save_path = os.path.join(ged_main_dir, 'best_model.pt')
+    # log_file_path = os.path.join(ged_main_dir, 'log.txt')
+    #
+    # trainer = Trainer(data_dir=ged_main_dir, device=d, best_model_path=model_save_path, args=ged_args, log_path=log_file_path)
+    # trainer.fit()
+    # trainer.test()
