@@ -203,3 +203,8 @@ class Dense(nn.Module):
 
     def forward(self, x):
         return self.act(self.conv(x))
+
+
+"""
+数据集IMDB报错：UnpicklingError: pickle data was truncated
+"""

@@ -25,7 +25,7 @@ def param_parser():
     parser.add_argument(
         "--dataset",
         nargs="?",
-        default="IMDBMulti",
+        default="PTC",
         help="Dataset name. Default is Test_PTC",
     )
 

@@ -41,7 +41,7 @@ class Trainer(object):
         """载入数据并划分出 验证集"""
         print("\nEnumerating unique labels.\n")
 
-        path = "../" + "datasets/" + self.dataset + "/" + self.type
+        path = "../../" + "datasets/" + self.dataset + "/" + self.type
 
         self.training_graphs = pickle.load(open(path + "/train_data.pickle", 'rb'))  #
         self.testing_graphs = pickle.load(open(path + "/test_data.pickle", 'rb'))
