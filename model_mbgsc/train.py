@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2023/6/8 16:12
+# @Time    : 2022/6/8 16:12
 # @Author  : LX Ann
 # @FileName: train.py
 # @Software: PyCharm
@@ -13,7 +13,7 @@ import numpy as np
 import torch.optim
 from tqdm import tqdm, trange
 
-from simgnn import SimGNN
+from mbgsc import SimGNN
 from parameter_config import param_parser
 from utils import tab_printer, random_id
 

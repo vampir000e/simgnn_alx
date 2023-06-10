@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2023/6/7 20:51
+# @Time    : 2022/6/7 20:51
 # @Author  : LX Ann
-# @FileName: simgnn.py
+# @FileName: mbgsc.py
 # @Software: PyCharm
 # @Email   : 578520080@qq.com
 

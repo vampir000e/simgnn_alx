@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2023/6/10 16:34
+# @Time    : 2022/6/10 16:34
 # @Author  : LX Ann
 # @FileName: parameter_config.py
 # @Software: PyCharm
@@ -32,9 +32,9 @@ parser.add_argument("--global_flag", type=lambda x: (str(x).lower() == 'true'), 
 parser.add_argument("--global_agg", type=str, default='fc_max_pool', help="aggregation function for global level gcn ")
 
 # training parameterss
-parser.add_argument('--iterations', type=int, default= 40, help='number of training epochs')   # default=1000 900 100
-parser.add_argument('--iter_val_start', type=int, default=30)  # 训练
-parser.add_argument('--iter_val_every', type=int, default=10)  # 验证
+parser.add_argument('--iterations', type=int, default= 10, help='number of training epochs')   # default=1000 900 100
+parser.add_argument('--iter_val_start', type=int, default=9)  # 训练
+parser.add_argument('--iter_val_every', type=int, default=1)  # 验证
 parser.add_argument('--inclusive', type=lambda x: (str(x).lower() == 'true'), default='True', help='True')
 
 parser.add_argument("--batch_size", type=int, default=128, help="Number of graph pairs per batch.")

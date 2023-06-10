@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2023/6/10 18:58
+# @Time    : 2022/6/10 18:58
 # @Author  : LX Ann
 # @FileName: gpse.py
 # @Software: PyCharm
@@ -35,16 +35,15 @@ class GraphMatchNetwork(torch.nn.Module):
         gcn_parameters = [dict(in_channels=self.gcn_filters[i - 1], out_channels=self.gcn_filters[i], bias=True) for i in range(1, self.gcn_numbers)]
         gcn_parameters.insert(0, dict(in_channels=node_init_dims, out_channels=self.gcn_filters[0], bias=True))
 
-        gin_parameters = [dict(nn=nn.Linear(in_features=self.gcn_filters[i - 1], out_features=self.gcn_filters[i])) for i in range(1, self.gcn_numbers)]
-        gin_parameters.insert(0, {'nn': nn.Linear(in_features=node_init_dims, out_features=self.gcn_filters[0])})
-
-        ggnn_parameters = [dict(out_channels=self.gcn_filters[i]) for i in range(self.gcn_numbers)]
+        # gin_parameters = [dict(nn=nn.Linear(in_features=self.gcn_filters[i - 1], out_features=self.gcn_filters[i])) for i in range(1, self.gcn_numbers)]
+        # gin_parameters.insert(0, {'nn': nn.Linear(in_features=node_init_dims, out_features=self.gcn_filters[0])})
+        # ggnn_parameters = [dict(out_channels=self.gcn_filters[i]) for i in range(self.gcn_numbers)]
 
         conv_layer_constructor = {
             'gcn': dict(constructor=DenseGCNConv, kwargs=gcn_parameters),
             'graphsage': dict(constructor=DenseSAGEConv, kwargs=gcn_parameters),
-            'gin': dict(constructor=DenseGINConv, kwargs=gin_parameters),
-            'ggnn': dict(constructor=DenseGGNN, kwargs=ggnn_parameters)
+            # 'gin': dict(constructor=DenseGINConv, kwargs=gin_parameters),
+            # 'ggnn': dict(constructor=DenseGGNN, kwargs=ggnn_parameters)
         }
 
         conv = conv_layer_constructor[self.args.conv]

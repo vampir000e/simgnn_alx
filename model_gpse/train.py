@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2023/6/10 15:12
+# @Time    : 2022/6/10 15:12
 # @Author  : LX Ann
 # @FileName: train.py.py
 # @Software: PyCharm
@@ -104,8 +104,7 @@ class Trainer(object):
 
         val_loss, val_true_pred, time_spent = self.val_batch_predication(val_feature_1, val_adj_1, val_mask_1,
                                                                          val_feature_2, val_adj_2, val_mask_2, val_ged)
-        write_log_file(self.log_file,
-                       "\nValidation loss = {}(e-3) @ {}".format(val_loss * 1000, datetime.now()))
+        write_log_file(self.log_file,"\nValidation loss = {}(e-3) @ {}".format(val_loss * 1000, datetime.now()))
 
         # testing
         test_predictions = self.testing_prediction()
@@ -225,11 +224,11 @@ if __name__ == '__main__':
     d = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     os.environ['CUDA_VISIBLE_DEVICES'] = ged_args.gpu_index
 
-    # path = os.path.abspath(os.path.join(os.path.dirname("__file__"), os.path.pardir)) #/src
     create_dir_if_not_exists(ged_args.log_path)
-    log_root_dir = ged_args.log_path # ./GEDLogs/
+    log_root_dir = ged_args.log_path  # ./GEDLogs/
     signature = ged_args.dataset + '@' + datetime.now().strftime("%Y-%m-%d@%H-%M-%S")
     current_run_dir = os.path.join(log_root_dir, signature)  #./GEDLogs/
+
     create_dir_if_not_exists(current_run_dir)
     model_save_path = os.path.join(current_run_dir, 'best_model.pt')  #./GEDLogs/best_model.pt
     log_file_path = os.path.join(current_run_dir, 'log.txt')    #./GEDLogs/log.txt
@@ -239,11 +238,3 @@ if __name__ == '__main__':
     trainer = Trainer(data_dir=ged_main_dir, device=d, best_model_path=model_save_path, args=ged_args, log_path=log_file_path)
     trainer.fit()
     trainer.test()
-
-    # ged_main_dir = "../datasets/"
-    # model_save_path = os.path.join(ged_main_dir, 'best_model.pt')
-    # log_file_path = os.path.join(ged_main_dir, 'log.txt')
-    #
-    # trainer = Trainer(data_dir=ged_main_dir, device=d, best_model_path=model_save_path, args=ged_args, log_path=log_file_path)
-    # trainer.fit()
-    # trainer.test()
