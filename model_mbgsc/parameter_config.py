@@ -22,40 +22,11 @@ import argparse
 def param_parser():
     parser = argparse.ArgumentParser(description="Run SimGNN_ALX.")
 
-    parser.add_argument(
-        "--dataset",
-        nargs="?",
-        default="PTC",
-        help="Dataset name. Default is Test_PTC",
-    )
-
-    parser.add_argument(
-        "--type",
-        nargs="?",
-        default="ged",
-        help="ged or mcs. Default is ged",
-    )
-
-    parser.add_argument(
-        "--epoch_num",
-        type=int,
-        default=10,
-        help="Number of training epochs. Default is 40."
-    )
-
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=128,
-        help="Number of graph pairs per batch. Default is 128.",
-    )
-
-    parser.add_argument(
-        "--val",
-        nargs="?",
-        default=0.25,
-        help="Validation rate. Default is 0.2",
-    )
+    parser.add_argument("--dataset", nargs="?", default="PTC", help="Dataset name. Default is Test_PTC",)
+    parser.add_argument("--type", nargs="?", default="ged", help="ged or mcs. Default is ged",)
+    parser.add_argument("--epoch_num", type=int, default=10,  help="Number of training epochs. Default is 40.")
+    parser.add_argument("--batch_size", type=int, default=128, help="Number of graph pairs per batch. Default is 128.",)
+    parser.add_argument("--val", nargs="?", default=0.25, help="Validation rate. Default is 0.2",)
 
     parser.add_argument("--hist", dest="hist", action="store_true")
     parser.set_defaults(hist="hist")
@@ -77,22 +48,11 @@ def param_parser():
 
     parser.add_argument('--gpu_index', type=str, default='0', help="gpu index to use")
 
-    parser.add_argument("--save-path",
-                        type=str,
-                        default=None,
-                        help="Where to save the trained model")
+    parser.add_argument("--save-path", type=str, default=None, help="Where to save the trained model")
 
-    parser.add_argument("--load-path",
-                        type=str,
-                        default=None,
-                        help="Load a pretrained model")
+    parser.add_argument("--load-path", type=str, default=None, help="Load a pretrained model")
 
-    parser.add_argument(
-        "--notify",
-        dest="notify",
-        action="store_true",
-        help="Send notification message when the code is finished (only Linux & Mac OS support).",
-    )
+    parser.add_argument("--notify", dest="notify", action="store_true", help="Send notification message when the code is finished (only Linux & Mac OS support).",)
     parser.set_defaults(notify=False)
 
     parser.add_argument("--perspectives", type=int, default=16, help='number of perspectives for node-graph matching')

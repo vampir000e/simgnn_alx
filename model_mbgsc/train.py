@@ -15,7 +15,7 @@ from tqdm import tqdm, trange
 
 from simgnn import SimGNN
 from parameter_config import param_parser
-from extra import tab_printer, random_id
+from utils import tab_printer, random_id
 
 
 class Trainer(object):

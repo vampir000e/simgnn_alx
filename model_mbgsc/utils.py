@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2023/6/8 15:34
 # @Author  : LX Ann
-# @FileName: extra.py
+# @FileName: utils.py
 # @Software: PyCharm
 # @Email   : 578520080@qq.com
 
@@ -165,8 +165,6 @@ class Conv(nn.Module):
 
     def forward(self, x):
         return self.act(self.conv(x))
-
-
 
 
 def tab_printer(args):

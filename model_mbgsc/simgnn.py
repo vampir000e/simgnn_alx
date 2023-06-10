@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 # import torch.nn.functional as functional
 from torch_geometric.nn import GCNConv
-from extra import feedback_Att, Dense_GCN, Conv_module
+from utils import feedback_Att, Dense_GCN, Conv_module
 
 
 """SimGNN_alx: A neural network approach to fast graph similarity computation"""
@@ -205,6 +205,8 @@ class Dense(nn.Module):
         return self.act(self.conv(x))
 
 
+
+################################################################
 """
 数据集IMDB报错：UnpicklingError: pickle data was truncated
 """
