@@ -19,15 +19,14 @@ import argparse
 # type = "ged"
 # type = "mcs"
 
-
 def param_parser():
     parser = argparse.ArgumentParser(description="Run SimGNN_ALX.")
 
     parser.add_argument(
         "--dataset",
         nargs="?",
-        default="AIDS700nef",
-        help="Dataset name. Default is AIDS",
+        default="IMDBMulti",
+        help="Dataset name. Default is Test_PTC",
     )
 
     parser.add_argument(
@@ -41,7 +40,7 @@ def param_parser():
         "--epoch_num",
         type=int,
         default=10,
-        help="Number of training epochs. Default is 100."
+        help="Number of training epochs. Default is 40."
     )
 
     parser.add_argument(

@@ -17,24 +17,64 @@ from texttable import Texttable
 class feedback_Att(nn.Module):
 
     def __init__(self):
+
         super(feedback_Att, self).__init__()
         self.att1 = Att()
         self.conv = Conv1d(1, 10, kernel_size=9, padding=4)
         self.att2 = Att()
 
     def forward(self, embedding):
-        global_e_1 = self.att2(embedding)
 
+        global_e_1 = self.att1(embedding)
         de_embedding = self.conv(global_e_1.view(1, 1, 16)).view(10, 16)
         if embedding.shape[0] < de_embedding.shape[0]:
             de_embedding = de_embedding[0:embedding.shape[0]]
         else:
-            embedding = embedding[0:embedding.shape[0]]
+            embedding = embedding[0:de_embedding.shape[0]]
         res = de_embedding - embedding
-
         global_e_2 = self.att2(res)
 
         return global_e_1 + global_e_2
+
+
+"""可学习的注意模块"""
+class Att(nn.Module):
+
+    def __init__(self):
+        super(Att, self).__init__()
+        self.weight = nn.Parameter(torch.Tensor(16, 16))  # 将张量变为可训练的
+        torch.nn.init.xavier_uniform_(self.weight)
+
+    def forward(self, embedding):
+        # mean = torch.mean(embedding, dim = 0, keep_dim = True) #需要划分batch,但是使用for循环使得一次只有一张图通过该模块，故dim=0
+        # global_context = torch.tanh(torch.mm(mean, self.weight))
+        global_context = torch.mean(torch.matmul(embedding, self.weight), dim=0)
+        global_context = torch.tanh(global_context)
+
+        # print(embedding.shape) # torch.Size([16])
+        # print(global_context.shape) # torch.Size([*, 16])
+
+        att_scores = torch.sigmoid(torch.mm(embedding, global_context.view(-1, 1)))  # 结果为长为n的得分序列,是列向量
+        ret = torch.mm(torch.t(embedding), att_scores)
+        return ret
+
+
+"""封装 预设 权重 和激活函数的 nn.Conv1d"""
+class Conv1d(nn.Module):
+
+    def __init__(self, in_channel, out_channel, kernel_size=3, stride=1, padding=1, bias=True, act="relu"):
+        super(Conv1d, self).__init__()
+        self.conv = nn.Conv1d(in_channel, out_channel, kernel_size, stride, padding, bias=bias)
+
+        self.act = nn.ReLU()
+        if (act == "lrelu"):
+            self.act = nn.LeakyReLU(0.2)
+        nn.init.kaiming_normal_(self.conv.weight)
+        self.conv.bias.data.zero_()
+
+    def forward(self, x):
+        return self.act(self.conv(x))
+
 
 class Dense_GCN(nn.Module):
 
@@ -91,42 +131,6 @@ class Conv_module(nn.Module):
 
         return self.act(ttmp)
 
-
-"""可学习的注意模块"""
-class Att(nn.Module):
-
-    def __init__(self):
-        super(Att, self).__init__()
-        self.weight = nn.Parameter(torch.Tensor(16, 16)) #将张量网络变为可训练的
-        torch.nn.init.xavier_uniform_(self.weight)
-
-    def forward(self, embedding):
-        global_context = torch.mean(torch.matmul(embedding, self.weight), dim=0)
-        global_context = torch.tanh(global_context)
-
-        att_scores = torch.sigmoid(torch.mm(embedding, global_context.view(-1, 1))) #结果为长为n的得分序列，是列向量
-        ret = torch.mm(torch.t(embedding), att_scores)
-
-        return ret
-
-
-"""封装 预设权重和激活函数的nn.Conv1d"""
-class Conv1d(nn.Module):
-
-    def __init__(self, in_channel, out_channel, kernel_size=3, stride=1, padding=1, bias=True, act="relu"):
-        super(Conv1d, self).__init__()
-        self.conv = nn.Conv1d(in_channel, out_channel, kernel_size, stride, padding, bias=bias)
-        self.act = nn.ReLU()
-
-        if (act == "lrelu"):
-            self.act = nn.LeakyReLU(0.2)
-        nn.init.kaiming_normal_(self.conv.weight)
-        self.conv.bias.data.zero_()
-
-    def forward(self, x):
-        return self.act(self.conv(x))
-
-
 """封装， 预设权重和激活函数的Linear"""
 class Dense(nn.Module):
 
@@ -161,6 +165,8 @@ class Conv(nn.Module):
 
     def forward(self, x):
         return self.act(self.conv(x))
+
+
 
 
 def tab_printer(args):

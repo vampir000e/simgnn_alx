@@ -9,10 +9,9 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as functional
+# import torch.nn.functional as functional
 from torch_geometric.nn import GCNConv
-from torch_geometric.utils import to_dense_adj, to_dense_batch
-from extra import feedback_Att, Dense_GCN, Conv_module, Att, Dense
+from extra import feedback_Att, Dense_GCN, Conv_module
 
 
 """SimGNN_alx: A neural network approach to fast graph similarity computation"""
@@ -124,75 +123,23 @@ class SimGNN(nn.Module):
         ret = self.fc(scores)
         return ret
 
-    def diffpool(self, abstract_features, edge_index, batch):
-        """
-        差分池化
-        :param abstract_features: 节点特征矩阵
-        :param edge_index: 边索引
-        :param batch: Batch vector, which assigns each node to a specific example
-        :return: pooled_features: Graph feature matrix
-        """
-        x, mask = to_dense_batch(abstract_features, batch)
-        adj = to_dense_adj(edge_index, batch)
-        return self.attention(x, adj, mask)
 
-    def consine_attention(self, v1, v2):
-        """
-        :param v1: (batch, len1, dim)
-        :param v2: (batch, len2, dim)
-        :return: (batch, len1, len2)
-        """
-        # (batch, len1, len2)
-        a = torch.bmm(v1, v2.permute(0, 2, 1))
+"""可学习的注意模块"""
+class Att(nn.Module):
 
-        v1_norm = v1.norm(p=2, dim=2, keepdim=True)  #(batch, len1, 1)
-        v2_norm = v2.norm(p=2, dim=2, keepdim=True).permute(0, 2, 1) #(batch, len2, 1)
-        d = v1_norm * v2_norm
-        return self.div_with_small_value(a, d)
+    def __init__(self):
+        super(Att, self).__init__()
+        self.weight = nn.Parameter(torch.Tensor(16, 16))  # 将张量变为可训练的
+        torch.nn.init.xavier_uniform_(self.weight)
 
-    def global_aggregation_info(self, v, agg_func_name):
-        """
-        :param v: (batch, len, dim)
-        :param agg_func_name:
-        :return: (batch, len)
-        """
-        if agg_func_name.lower() == 'max_pool':
-            agg_v = torch.max(v, 1)[0]
-        elif agg_func_name.lower() == 'fc_max_pool':
-            agg_v = self.global_fc_agg(v)
-            agg_v = torch.max(agg_v, 1)[0]
-        elif agg_func_name.lower() == 'mean_pool':
-            agg_v = torch.mean(v, dim=1)
-        elif agg_func_name.lower() == 'fc_mean_pool':
-            agg_v = self.global_fc_agg(v)
-            agg_v = torch.mean(agg_v, dim=1)
-        elif agg_func_name.lower() == 'lstm':
-            _, (agg_v_last, _) = self.global_lstm_agg(v)
-            agg_v = agg_v_last.permute(1, 0, 2).contiguous().view(-1, self.gcn_last_filter * 2)
-        else:
-            raise NotImplementedError
-        return agg_v
-
-    def multi_perspective_match_func(self, v1, v2, w):
-        """
-        :param v1: (batch, len, dim)
-        :param v2: (batch, len, dim)
-        :param w: (perspectives, dim)
-        :return: (batch, len, perspectives)
-        """
-        w = w.transpose(1, 0).unsqueeze(0).unsqueeze(0)        # (1, 1, dim, perspectives)
-        v1 = w * torch.stack([v1] * self.perspectives, dim=3)  # (batch, len, dim, perspectives)
-        v2 = w * torch.stack([v2] * self.perspectives, dim=3)  # (batch, len, dim, perspectives)
-        return functional.consine_simlarity(v1, v2, dim=2)     # (batch, len, perspectives)
-
-    def forward_dense_gcn_layer(self, feat, adj):
-
-        feat_in = feat
-        for i in range(1, self.gcn_numbers + 1):
-            feat_out = functional.relu(getattr(self, 'gc{}'.format(i))(x=feat_in, adj=adj, mask=None, add_loop=False), inplace=True)
-            feat_out = functional.dropout(feat_out, p=self.dropout, training=self.training)
-            feat_in = feat_out
-        return feat_out
+    def forward(self, embedding):
+        # mean = torch.mean(embedding, dim = 0, keep_dim = True) #需要划分batch,但是使用for循环使得一次只有一张图通过该模块，故dim=0
+        # global_context = torch.tanh(torch.mm(mean, self.weight))
+        global_context = torch.mean(torch.matmul(embedding, self.weight), dim=0)
+        global_context = torch.tanh(global_context)
+        att_scores = torch.sigmoid(torch.mm(embedding, global_context.view(-1, 1)))  # 结果为长为n的得分序列,是列向量
+        ret = torch.mm(torch.t(embedding), att_scores)
+        return ret
 
 
 """神经张量网络，用于对两个向量的相似度进行打分"""
@@ -200,15 +147,15 @@ class NTN(nn.Module):
 
     def __init__(self):
         super(NTN, self).__init__()
-        self.W = torch.nn.Parameter(torch.Tensor(16, 16, 16)) #最后一维是K
+        self.W = torch.nn.Parameter(torch.Tensor(16, 16, 16))  # 最后一维是K
         self.V = torch.nn.Parameter(torch.Tensor(16, 32))
         self.bias = torch.nn.Parameter(torch.Tensor(16, 1))
-
         torch.nn.init.xavier_uniform_(self.W)
         torch.nn.init.xavier_uniform_(self.V)
         torch.nn.init.xavier_uniform_(self.bias)
 
-    def forward(self, embedding_1, embedding_2): #两个向量都是列向量
+    def forward(self, embedding_1, embedding_2):  # 注意两个向量都是列向量
+
         A = torch.mm(torch.t(embedding_1), self.W.view(16, -1))
         A = A.view(16, -1)
         A = torch.mm(torch.t(A), embedding_2)
@@ -219,6 +166,7 @@ class NTN(nn.Module):
         ret = nn.functional.relu(A + B + self.bias)
 
         return ret
+
 
 """4层全连接网络， input_size to 16 to 8 to 4 to 1"""
 class FC(nn.Module):
@@ -233,4 +181,25 @@ class FC(nn.Module):
     def forward(self, x):
         ret = self.conv_2(self.conv_1(x))
         ret = self.conv_4(self.conv_3(ret))
+        return ret
 
+
+"""封装 预设权重 和 激活函数的Linear"""
+class Dense(nn.Module):
+
+    def __init__(self, in_size, out_size, bias=True, act="relu"):
+
+        super(Dense, self).__init__()
+        self.conv = nn.Linear(in_size, out_size, bias)
+
+        self.act = nn.ReLU()
+        if (act == "sigmoid"):
+            self.act = nn.Sigmoid()
+
+        """预设权重"""
+        nn.init.kaiming_normal_(self.conv.weight)
+        if bias is True:
+            self.conv.bias.data.zero_()
+
+    def forward(self, x):
+        return self.act(self.conv(x))
