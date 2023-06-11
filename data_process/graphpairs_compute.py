@@ -126,7 +126,10 @@ def gp_compute(dataset, type):
     print("train_pair: ", len(train_pair))  # 275个训练图的组合             1 + 2 + ... + 275 = 275 * 276 / 2 = 37950
     print("test_pair: ", len(test_pair))  # 275个训练图与69个测试图的组合   275 * 69 = 18975
 
-
+    with open(path + "/datasets/" + dataset + "/" + type + "/train_data.pickle", "wb") as handle:
+        pickle.dump(train_pair, handle)
+    with open(path + "/datasets/" + dataset + "/" + type + "/test_data.pickle", "wb") as handle:
+        pickle.dump(test_pair, handle)
 
 
 if __name__ == '__main__':
@@ -137,3 +140,5 @@ if __name__ == '__main__':
     type = "ged"               # "ged" / "mcs"
 
     gp_compute(dataset, type)  # 计算图对
+
+
