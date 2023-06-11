@@ -65,7 +65,6 @@ def dataprocess():
 # dataprocess()
 
 
-""""plot loss"""
 def plot_loss(res_path1, res_path2, res_path3, res_path4):
 
     x = []
@@ -119,7 +118,7 @@ def plot_loss(res_path1, res_path2, res_path3, res_path4):
     plt.tight_layout()
     plt.show()
 
-    plt.savefig("../../saved/loss.png")
+    # plt.savefig("../../saved/loss.png")
 
 
 if __name__ == '__main__':
