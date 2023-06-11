@@ -22,7 +22,6 @@ class Trainer(object):
 
     def __init__(self, data_dir, device, best_model_path, args, log_path):
         super(Trainer, self).__init__()
-
         self.max_iterations = args.iterations
         self.iter_val_start = args.iter_val_start
         self.iter_val_every = args.iter_val_every
@@ -35,12 +34,11 @@ class Trainer(object):
         self.dataset = GEDDataset(ged_main_dir=data_dir, args=args)
         self.flag_inclusive = args.inclusive
         write_log_file(self.log_file, str(args))
-        self.model = GraphMatchNetwork(node_init_dims=self.dataset.input_dim, arguments=args,
-                                                 device=self.device).to(self.device)
+        self.model = GraphMatchNetwork(node_init_dims=self.dataset.input_dim, arguments=args, device=self.device).to(self.device)
         write_log_file(self.log_file, str(self.model))
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
 
-        print("\n\n", self.model.state_dict().keys())
+        # print("\n\n", self.model.state_dict().keys())
 
     def fit(self):
         self.model.train()
@@ -234,7 +232,7 @@ if __name__ == '__main__':
     log_file_path = os.path.join(current_run_dir, 'log.txt')    #./GEDLogs/log.txt
     ged_main_dir = ged_args.data_dir
 
-    tab_printer(ged_args)
+    # tab_printer(ged_args)
     trainer = Trainer(data_dir=ged_main_dir, device=d, best_model_path=model_save_path, args=ged_args, log_path=log_file_path)
     trainer.fit()
     trainer.test()

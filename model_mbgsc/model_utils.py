@@ -646,7 +646,7 @@ class DistanceModelResult(Result):
                     return file
         if cands:
             return cands[0]
-        raise RuntimeError('No figures files in {}'.format(files))  # TODO: smart choice and cross-checking
+        raise RuntimeError('No figures files in {}'.format(files))
 
     def _select_dist_mat(self, norm):
         return self.dist_norm_mat_ if norm else self.dist_mat_

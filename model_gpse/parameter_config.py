@@ -17,7 +17,7 @@ parser.add_argument("--data-dir", type=str, default="../../datasets", help='root
 # datasets = "PTC"
 # datasets = "LINUX"
 # datasets = "Test_PTC"
-parser.add_argument('--dataset', type=str, default="ptc", help='indicate the specific dataset')
+parser.add_argument('--dataset', type=str, default="PTC", help='indicate the specific dataset')
 parser.add_argument('--task', type=str, default='regression', help='classification/regression')
 
 parser.add_argument("--filters", type=str, default='100_100_100', help="filters (neurons) for graph neural networks")

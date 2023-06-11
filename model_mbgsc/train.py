@@ -12,11 +12,12 @@ import time
 import numpy as np
 import torch.optim
 from tqdm import tqdm, trange
-
+import torch.nn.functional as F
 from mbgsc import SimGNN
 from parameter_config import param_parser
-from utils import tab_printer, random_id
-
+from utils import tab_printer, random_id, write_log_file
+from datetime import datetime
+import torch.nn.functional as functional
 
 class Trainer(object):
 
@@ -39,10 +40,9 @@ class Trainer(object):
         self.val = self.args.val
 
         """载入数据并划分出 验证集"""
-        print("\nEnumerating unique labels.\n")
+        # print("\nEnumerating unique labels.\n")
 
         path = "../../" + "datasets/" + self.dataset + "/" + self.type
-
         self.training_graphs = pickle.load(open(path + "/train_data.pickle", 'rb'))  #
         self.testing_graphs = pickle.load(open(path + "/test_data.pickle", 'rb'))
 
@@ -89,6 +89,7 @@ class Trainer(object):
         loss = 0
         bool = False
         self.model.train()
+        time = datetime.now()
         epochs = trange(self.epoch_num, leave=True, desc="Epoch")
 
         for epoch in epochs:
@@ -101,10 +102,16 @@ class Trainer(object):
                 self.node_processed = self.node_processed + len(batch)
                 loss = self.epoch_loss / self.node_processed
                 epochs.set_description("Epoch (Loss=%g)" % round(loss, 6))
+                time_spent = datetime.now() - time
+                time = datetime.now()
+                # write_log_file(self.log_file, "{},{}, @ {}".format(batch, loss * 1000, time_spent))
 
             val_loss = self.validate()
             self.record.append((loss, val_loss))  # 记录(train_loss, val_loss)
             epochs.set_description("Epoch train_loss:[%g] val_loss:[%g]" % (round(loss, 5), round(val_loss, 5)))
+            # write_log_file(self.log_file,
+            #                "\n{},{}, spend time = {} @ {}".format(epoch, val_loss * 1000, time_spent,
+            #                                                       datetime.now()))
 
             path = "../../datasets/" + self.dataset + "/" + self.type  # ged
             with open(path + '/train_error_graph.txt', "a") as train_error_writer:
@@ -284,6 +291,20 @@ class Trainer(object):
 
         return new_data
 
+    def training_batch_predication(self, batch_feature_1, batch_adjacent_1, batch_mask_1, batch_feature_2,
+                                   batch_adjacent_2, batch_mask_2, ged_pairs):
+
+        self.model.train()
+        self.optimizer.zero_grad()
+        predictions = self.batch_pairs_predication(batch_feature_1, batch_adjacent_1, batch_mask_1, batch_feature_2,
+                                                   batch_adjacent_2, batch_mask_2)
+        trues = torch.from_numpy(np.array(ged_pairs, dtype=np.float32)).to(self.device)
+
+        loss = functional.mse_loss(predictions, trues)
+        loss.backward()
+        self.optimizer.step()
+
+        return loss.item(), torch.stack((trues, predictions), 1)
 
 if __name__ == '__main__':
     import os
@@ -291,21 +312,8 @@ if __name__ == '__main__':
     d = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_index
 
-    tab_printer(args)
+    # tab_printer(args)
     trainer = Trainer(args, device=d)
     trainer.fit()
+    trainer.score()
 
-
-    if args.notify:
-        import os
-        import sys
-        if sys.platform == "linux":
-            os.system('notify-send SimGNN "Program is finished."')
-        elif sys.platform == "posix":
-            os.system(
-                """
-                   osascript -e 'display notification "SimGNN" with title "Program is finished."'
-                """
-            )
-        else:
-            raise NotImplementedError("No notification support for this OS.")
