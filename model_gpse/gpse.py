@@ -197,8 +197,7 @@ class GraphMatchNetwork(torch.nn.Module):
         attention_h = feature_h.unsqueeze(1) * attention.unsqueeze(3)  # (batch, 1, len_h, dim) * (batch, len_p, len_h, dim) => (batch, len_p, len_h, dim)
         attention_p = feature_p.unsqueeze(2) * attention.unsqueeze(3)  # (batch, len_p, 1, dim) * (batch, len_p, len_h, dim) => (batch, len_p, len_h, dim)
 
-        att_mean_h = self.div_with_small_value(attention_h.sum(dim=2),
-                                               attention.sum(dim=2, keepdim=True))  # (batch, len_p, dim)
+        att_mean_h = self.div_with_small_value(attention_h.sum(dim=2), attention.sum(dim=2, keepdim=True))  # (batch, len_p, dim)
         att_mean_p = self.div_with_small_value(attention_p.sum(dim=1), attention.sum(dim=1, keepdim=True).permute(0, 2, 1))  # (batch, len_h, dim)
 
         if self.args.match.lower() == "node-graph":

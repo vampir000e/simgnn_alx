@@ -10,12 +10,10 @@
 plot loss
 """
 
-
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-
 
 bool = True
 
