@@ -29,7 +29,7 @@ def load_graph(dir):
 
     return graphs
 
-def load_data(dataset): #eg: datasets = "AIDS700nef"
+def load_data(dataset):  #eg: datasets = "AIDS700nef"
     tmp_path = path + "/datasets" + "/" + dataset
 
     train_graphs = []

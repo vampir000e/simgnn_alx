@@ -135,16 +135,18 @@ class Att(nn.Module):
     def forward(self, embedding):
         # mean = torch.mean(embedding, dim = 0, keep_dim = True) #需要划分batch,但是使用for循环使得一次只有一张图通过该模块，故dim=0
         # global_context = torch.tanh(torch.mm(mean, self.weight))
+        # 加权平均
         global_context = torch.mean(torch.matmul(embedding, self.weight), dim=0)
         global_context = torch.tanh(global_context)
+        # 嵌入与global_context相乘，计算权重分数
         att_scores = torch.sigmoid(torch.mm(embedding, global_context.view(-1, 1)))  # 结果为长为n的得分序列,是列向量
+        # 加权组合
         ret = torch.mm(torch.t(embedding), att_scores)
         return ret
 
 
 """神经张量网络，用于对两个向量的相似度进行打分"""
 class NTN(nn.Module):
-
     def __init__(self):
         super(NTN, self).__init__()
         self.W = torch.nn.Parameter(torch.Tensor(16, 16, 16))  # 最后一维是K
@@ -155,7 +157,6 @@ class NTN(nn.Module):
         torch.nn.init.xavier_uniform_(self.bias)
 
     def forward(self, embedding_1, embedding_2):  # 注意两个向量都是列向量
-
         A = torch.mm(torch.t(embedding_1), self.W.view(16, -1))
         A = A.view(16, -1)
         A = torch.mm(torch.t(A), embedding_2)
@@ -164,7 +165,6 @@ class NTN(nn.Module):
         B = torch.mm(self.V, B)
 
         ret = nn.functional.relu(A + B + self.bias)
-
         return ret
 
 
@@ -192,7 +192,6 @@ class Dense(nn.Module):
         super(Dense, self).__init__()
         self.conv = nn.Linear(in_size, out_size, bias)
 
-        self.act = nn.ReLU()
         if (act == "sigmoid"):
             self.act = nn.Sigmoid()
 
@@ -202,11 +201,7 @@ class Dense(nn.Module):
             self.conv.bias.data.zero_()
 
     def forward(self, x):
-        return self.act(self.conv(x))
+        return nn.ReLU()(self.conv(x))
 
 
 
-################################################################
-"""
-数据集IMDB报错：UnpicklingError: pickle data was truncated
-"""

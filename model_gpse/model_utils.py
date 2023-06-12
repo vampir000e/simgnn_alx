@@ -220,7 +220,7 @@ class NodeFeatureConstantEncoder(NodeFeatureEncoder):
         assert (node_feat_name is None)
         self.input_dim_ = int(node_encoder_name.split('_')[1])
         self.const = float(node_encoder_name.split('_')[2])
-        print('A constant feature encoder where the input_dim is {} and input feature is {}'.format(self.input_dim_, self.const))
+        # print('A constant feature encoder where the input_dim is {} and input feature is {}'.format(self.input_dim_, self.const))
 
     def encode(self, g):
         rnt = np.full((g.number_of_nodes(), self.input_dim_), self.const)
@@ -277,8 +277,7 @@ class DistanceCalculator(object):
 
         # self.sfn = '{}/{}_{}_{}_gidpair_dist_map'.format(root_folder, data_name.lower(), 'ged', 'astar')  # 'mcs', 'mccreesh2017'   'ged', 'astar'
         # MCS
-        self.sfn = '{}/{}_{}_{}_gidpair_dist_map'.format(root_folder, data_name.lower(), 'mcs',
-                                                         'mccreesh2017')  # 'mcs', 'mccreesh2017'   'ged', 'astar'
+        self.sfn = '{}/{}_{}_{}_gidpair_dist_map'.format(root_folder, data_name.lower(), 'mcs', 'mccreesh2017')  # 'mcs', 'mccreesh2017'   'ged', 'astar'
         self.gid_pair_dist_map = load(self.sfn)
         # print(type(self.gid_pair_dist_map))
         if not self.gid_pair_dist_map:
@@ -591,11 +590,11 @@ class DistanceModelResult(Result):
     ############## MCS改 #######################
     def _load_result_mat(self, metric, model, m, n):
         # MCS
-        file_p = self.result_folder + '/{}/mcs/mcs_mcs_mat_ptc_mccreesh2017_*.npy'.format(self.dataset, metric,
-                                                                                          self.dist_metric(), metric,
-                                                                                          self.dataset, model)
+        # file_p = self.result_folder + '/{}/mcs/mcs_mcs_mat_ptc_mccreesh2017_*.npy'.format(self.dataset, metric,
+        #                                                                                   self.dist_metric(), metric,
+        #                                                                                   self.dataset, model)
 
-        # file_p = self.result_folder + '/{}/{}/{}_{}_mat_{}_{}_*.npy'.format(self.dataset, metric,self.dist_metric(), metric, self.dataset, model)
+        file_p = self.result_folder + '/{}/{}/{}_{}_mat_{}_{}_*.npy'.format(self.dataset, metric,self.dist_metric(), metric, self.dataset, model)
 
         # print(self.result_folder)
         # print('load_result_mat\nfile_p: ', file_p)
@@ -646,7 +645,7 @@ class DistanceModelResult(Result):
                     return file
         if cands:
             return cands[0]
-        raise RuntimeError('No figures files in {}'.format(files))  # TODO: smart choice and cross-checking
+        raise RuntimeError('No figures files in {}'.format(files))
 
     def _select_dist_mat(self, norm):
         return self.dist_norm_mat_ if norm else self.dist_mat_

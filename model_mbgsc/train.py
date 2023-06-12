@@ -39,13 +39,11 @@ class Trainer(object):
         self.type = self.args.type
         self.val = self.args.val
 
-        """载入数据并划分出 验证集"""
+        """载入数据并划分"""
         # print("\nEnumerating unique labels.\n")
-
         path = "../../" + "datasets/" + self.dataset + "/" + self.type
         self.training_graphs = pickle.load(open(path + "/train_data.pickle", 'rb'))  #
         self.testing_graphs = pickle.load(open(path + "/test_data.pickle", 'rb'))
-
         # print(len(self.training_graphs)) # 37950
 
         random.shuffle(self.training_graphs)  # 训练集随机排序,然后随机划分
@@ -64,7 +62,7 @@ class Trainer(object):
 
         """求出一共的特征数量"""
         self.global_labels = set()
-        for data in tqdm(graph_pairs):
+        for data in graph_pairs:
             self.global_labels = self.global_labels.union(set(data["labels_1"]))
             self.global_labels = self.global_labels.union(set(data["labels_2"]))
         self.global_labels = list(self.global_labels)
@@ -73,7 +71,6 @@ class Trainer(object):
 
         #######################################interface#####################################
         self.model = SimGNN(self.args, self.labels, self.device).to(self.device)
-
         # self.model = SimGNN_graphsim(self.labels, self.hist, self.ifDense_GCN, self.feedback)
 
         self.optimizer = torch.optim.Adam(self.model.parameters())
@@ -93,7 +90,7 @@ class Trainer(object):
         epochs = trange(self.epoch_num, leave=True, desc="Epoch")
 
         for epoch in epochs:
-            batches = self.create_batches()
+            batches = self.create_batches() # 创建批次数据
             self.loss_sum = 0
             self.epoch_loss = 0
             self.node_processed = 0
@@ -120,7 +117,7 @@ class Trainer(object):
 
             torch.save(self.model.state_dict(), path + '/model_state.pth')
             epoch_counter += 1
-            self.score(epoch_counter)
+            # self.score(epoch_counter)
 
             # self.train(epochs)
 
@@ -135,7 +132,6 @@ class Trainer(object):
 
     """每个epoch验证一次"""
     def validate(self):
-
         self.model.eval()
         losses = 0
         for data in self.val_graphs:
@@ -144,28 +140,14 @@ class Trainer(object):
             losses = losses + torch.nn.functional.mse_loss(data["target"], prediction[0])
         return losses.item()
 
-    def score(self, epoch_counter):
-        """
-        Scoring on the test set.
-        """
+    def score(self):
         print("\n\nModel evaluation.\n")
         start_time = time.time()
         self.model.eval()
-
+        self.model.to(self.device)
         scores = []
         losses = 0
         mae = 0
-        rho = 0
-        tau = 0
-        pat10 = 0
-        pat20 = 0
-        # ground_truth = np.zeros((len(self.testing_graphs), len(self.training_graphs)))
-        # prediction_mat = np.zeros((len(self.testing_graphs), len(self.training_graphs)))
-        test_mse = 0
-        test_rho = 0
-        test_tau = 0
-        # rho_list = []
-
         i = 0
         for data in tqdm(self.testing_graphs):  # data: test_graph
             data = self.transfer_to_torch(data)
@@ -177,57 +159,22 @@ class Trainer(object):
             losses += torch.nn.functional.mse_loss(prediction[0], data["target"])
             scores.append(F.mse_loss(prediction, target, reduction="none"))
             mae = mae + torch.nn.functional.l1_loss(prediction[0], data["target"])
-            # rho += calculate_ranking_correlation(spearmanr, prediction_mat[i], ground_truth[i])
-            # rho_list.append(
-            #     calculate_ranking_correlation(
-            #         spearmanr, prediction_mat[i], ground_truth[i]
-            #     )
-            # )
-            # tau += calculate_ranking_correlation(kendalltau, prediction_mat[i], ground_truth[i])
-            # rho += metrics_spearmanr_rho(ground_truth[i], prediction_mat[i])
-            # tau += metrics_kendall_tau(ground_truth[i], prediction_mat[i])
-            # pat10 += calculate_prec_at_k(10, prediction_mat[i], ground_truth[i])
-            # pat20 += calculate_prec_at_k(20, prediction_mat[i], ground_truth[i])
             i += 1
 
         # model_error = np.mean(scores).item()
         losses = losses / len(self.testing_graphs)
         mae = mae / len(self.testing_graphs)
-        rho = rho / len(self.testing_graphs)
-        # test_rho = np.mean(rho_list).item()
-        tau = tau / len(self.testing_graphs)
-        pat10 = pat10 / len(self.testing_graphs)
-        pat20 = pat20 / len(self.testing_graphs)
 
-        # res_path = os.path.abspath(os.path.join(os.path.dirname("__file__"), os.path.pardir))  # /src
-        # res_path = res_path + "\\datasets\\" + self.datasets + "\\" + self.type
-        # with open(res_path + '/figures.txt', 'a') as f:
-        #     print("\n--- %s seconds ---" % (time.time()), file=f)
-        #     print("\nMSE: " + str(round(model_error, 5)) + ".", file=f)
-        #     # print("\nModel test error: " + str(round(losses.item(), 5)) + ".", file=f)
-        #     print("\nMAE: " + str(round(mae.item(), 5)) + ".", file=f)
-        #     print("\nSpearman's rho: " + str(round(rho, 5)) + ".", file=f)
-        #     print("\nKendall's tau: " + str(round(tau, 5)) + ".", file=f)
-        #     print("p@10: " + str(round(pat10, 5)) + ".", file=f)
-        #     print("p@20: " + str(round(pat20, 5)) + ".", file=f)
-        #     print("\n")
-
-        save_path = "../../datasets/" + self.dataset + "/" + self.type
-        # print('\n\n >>>>>>>>>>>>>>>>>>\t' + str(model_error) + '\n')
-        with open(save_path + "/test_error_graph.txt", "a") as test_error_writer:
-            test_error_writer.write(str(epoch_counter) + ',' + str(losses) + '\n')
-        test_error_writer.close()
-
+        # save_path = "../../datasets/" + self.dataset + "/" + self.type
+        # # print('\n\n >>>>>>>>>>>>>>>>>>\t' + str(model_error) + '\n')
+        # with open(save_path + "/test_error_graph.txt", "a") as test_error_writer:
+        #     test_error_writer.write(str(epoch_counter) + ',' + str(losses) + '\n')
+        # test_error_writer.close()
 
         print("--- %s seconds ---" % (time.time() - start_time))
         # print("\nMSE: " + str(round(model_error, 5)) + ".")
         print("\nMSE: " + str(round(losses.item(), 5)) + ".")
         print("MAE: " + str(round(mae.item(), 5)) + ".")
-        print("Spearman's rho: " + str(round(rho, 5)) + ".")
-        # print("test_rho: " + str(round(test_rho, 5)) + ".")
-        print("Kendall's tau: " + str(round(tau, 5)) + ".")
-        print("p@10: " + str(round(pat10, 5)) + ".")
-        print("p@20: " + str(round(pat20, 5)) + ".")
 
     def create_batches(self):
         """
@@ -316,4 +263,5 @@ if __name__ == '__main__':
     trainer = Trainer(args, device=d)
     trainer.fit()
     trainer.score()
+
 
